@@ -1,0 +1,1099 @@
+# This Python 3 environment comes with many helpful analytics libraries installed
+# It is defined by the kaggle/python Docker image: https://github.com/kaggle/docker-python
+# For example, here's several helpful packages to load
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+# Input data files are available in the read-only "../input/" directory
+# For example, running this (by clicking run or pressing Shift+Enter) will list all files under the input directory
+
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+
+# You can write up to 20GB to the current directory (/kaggle/working/) that gets preserved as output when you create a version using "Save & Run All" 
+# You can also write temporary files to /kaggle/temp/, but they won't be saved outside of the current session
+/kaggle/input/tiktok-dataset/tiktok_dataset.csv
+# Data manipulation and analysis
+import pandas as pd
+import numpy as np
+
+# Data visualization
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Statistical functions
+from scipy import stats
+
+# Preprocessing
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.utils import resample
+
+# Machine learning models
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
+from xgboost import XGBClassifier
+
+# Model evaluation
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import classification_report, confusion_matrix, ConfusionMatrixDisplay, accuracy_score, \
+                            precision_score, recall_score, f1_score
+from xgboost import plot_importance
+
+# Suppress warnings
+import warnings
+warnings.filterwarnings("ignore")
+
+# Display file paths in the input directory
+import os
+for dirname, _, filenames in os.walk('/kaggle/input'):
+    for filename in filenames:
+        print(os.path.join(dirname, filename))
+/kaggle/input/tiktok-dataset/tiktok_dataset.csv
+Inspecting and Analyzing Data
+# Load your dataset
+file_path = '/kaggle/input/tiktok-dataset/tiktok_dataset.csv'  # Update with your actual file name
+data = pd.read_csv(file_path)
+# Display the first few rows of the dataset
+data.head()
+#	claim_status	video_id	video_duration_sec	video_transcription_text	verified_status	author_ban_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count
+0	1	claim	7017666017	59	someone shared with me that drone deliveries a...	not verified	under review	343296.0	19425.0	241.0	1.0	0.0
+1	2	claim	4014381136	32	someone shared with me that there are more mic...	not verified	active	140877.0	77355.0	19034.0	1161.0	684.0
+2	3	claim	9859838091	31	someone shared with me that american industria...	not verified	active	902185.0	97690.0	2858.0	833.0	329.0
+3	4	claim	1866847991	25	someone shared with me that the metro of st. p...	not verified	active	437506.0	239954.0	34812.0	1234.0	584.0
+4	5	claim	7105231098	19	someone shared with me that the number of busi...	not verified	active	56167.0	34987.0	4110.0	547.0	152.0
+data.info()
+<class 'pandas.core.frame.DataFrame'>
+RangeIndex: 19382 entries, 0 to 19381
+Data columns (total 12 columns):
+ #   Column                    Non-Null Count  Dtype  
+---  ------                    --------------  -----  
+ 0   #                         19382 non-null  int64  
+ 1   claim_status              19084 non-null  object 
+ 2   video_id                  19382 non-null  int64  
+ 3   video_duration_sec        19382 non-null  int64  
+ 4   video_transcription_text  19084 non-null  object 
+ 5   verified_status           19382 non-null  object 
+ 6   author_ban_status         19382 non-null  object 
+ 7   video_view_count          19084 non-null  float64
+ 8   video_like_count          19084 non-null  float64
+ 9   video_share_count         19084 non-null  float64
+ 10  video_download_count      19084 non-null  float64
+ 11  video_comment_count       19084 non-null  float64
+dtypes: float64(5), int64(3), object(4)
+memory usage: 1.8+ MB
+Question 1: When reviewing the first few rows of the dataframe, what do you observe about the data? What does each row represent?
+
+Ans: Each row represents a TikTok video with metadata and engagement metrics. Key columns include video_id, video_duration_sec, video_transcription_text, and various counts for views, likes, shares, downloads, and comments.
+
+Question 2: When reviewing the data.info() output, what do you notice about the different variables? Are there any null values? Are all of the variables numeric? Does anything else stand out?
+
+Ans: The dataset contains numeric and object data types. There are 298 missing values in several columns, including claim_status and video_transcription_text. Most variables are numeric, but a few are categorical.
+
+Question 3: When reviewing the data.describe() output, what do you notice about the distributions of each variable? Are there any questionable values? Does it seem that there are outlier values?
+
+Ans: The summary statistics show a wide range of values, suggesting variability. Some variables, like video_view_count and video_like_count, have high standard deviations, indicating potential outliers. The minimum and maximum values for some metrics also suggest the presence of outliers.
+
+# Get summary statistics of the data
+data.describe(include = "all")
+#	claim_status	video_id	video_duration_sec	video_transcription_text	verified_status	author_ban_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count
+count	19382.000000	19084	1.938200e+04	19382.000000	19084	19382	19382	19084.000000	19084.000000	19084.000000	19084.000000	19084.000000
+unique	NaN	2	NaN	NaN	19012	2	3	NaN	NaN	NaN	NaN	NaN
+top	NaN	claim	NaN	NaN	a friend read in the media a claim that badmi...	not verified	active	NaN	NaN	NaN	NaN	NaN
+freq	NaN	9608	NaN	NaN	2	18142	15663	NaN	NaN	NaN	NaN	NaN
+mean	9691.500000	NaN	5.627454e+09	32.421732	NaN	NaN	NaN	254708.558688	84304.636030	16735.248323	1049.429627	349.312146
+std	5595.245794	NaN	2.536440e+09	16.229967	NaN	NaN	NaN	322893.280814	133420.546814	32036.174350	2004.299894	799.638865
+min	1.000000	NaN	1.234959e+09	5.000000	NaN	NaN	NaN	20.000000	0.000000	0.000000	0.000000	0.000000
+25%	4846.250000	NaN	3.430417e+09	18.000000	NaN	NaN	NaN	4942.500000	810.750000	115.000000	7.000000	1.000000
+50%	9691.500000	NaN	5.618664e+09	32.000000	NaN	NaN	NaN	9954.500000	3403.500000	717.000000	46.000000	9.000000
+75%	14536.750000	NaN	7.843960e+09	47.000000	NaN	NaN	NaN	504327.000000	125020.000000	18222.000000	1156.250000	292.000000
+max	19382.000000	NaN	9.999873e+09	60.000000	NaN	NaN	NaN	999817.000000	657830.000000	256130.000000	14994.000000	9599.000000
+data['claim_status'].value_counts()
+claim_status
+claim      9608
+opinion    9476
+Name: count, dtype: int64
+What are the different values for claim status and how many of each are in the data? The claim_status column has the following values:
+
+claim: 9,608 instances opinion: 9,476 instances NaN (missing values): 298 instances
+
+# Determine the average view counts of videos with a "claim" status
+data_claims = data[data["claim_status"] == "claim"]  # use a Boolean mask to subset data
+print("Mean:", "%.2f" % data_claims["video_view_count"].mean())
+print("Median:", data_claims["video_view_count"].median())
+Mean: 501029.45
+Median: 501555.0
+# Determine the average view counts of videos with an "opinion" status
+data_opinions = data[data["claim_status"] == "opinion"]  # use a Boolean mask to subset data
+print("Mean:", "%.2f" % data_opinions["video_view_count"].mean())
+print("Median:", data_opinions["video_view_count"].median())
+Mean: 4956.43
+Median: 4953.0
+# Determine counts for each group combination of `claim_status` 
+# and `author_ban_status`
+data.groupby(["claim_status", "author_ban_status"])["#"].count()
+claim_status  author_ban_status
+claim         active               6566
+              banned               1439
+              under review         1603
+opinion       active               8817
+              banned                196
+              under review          463
+Name: #, dtype: int64
+videos classified as "claim" have a greater tendency to be posted by authors that have are "banned" or "under review" in comparison to videos that have been classified as "opinion"*
+# Calculate the median video share count of `author_ban_status`
+data.groupby("author_ban_status")["video_share_count"].median()
+author_ban_status
+active            437.0
+banned          14468.0
+under review     9444.0
+Name: video_share_count, dtype: float64
+# Calculate the count, mean, and median of engagement columns
+# grouped by `author_ban_status`
+data.groupby(["author_ban_status"]).agg({"video_view_count" : ["count", "mean", "median"],
+                                         "video_like_count": ["mean", "median"],
+                                         "video_share_count": ["mean", "median"]})
+video_view_count	video_like_count	video_share_count
+count	mean	median	mean	median	mean	median
+author_ban_status							
+active	15383	215927.039524	8616.0	71036.533836	2222.0	14111.466164	437.0
+banned	1635	445845.439144	448201.0	153017.236697	105573.0	29998.942508	14468.0
+under review	2066	392204.836399	365245.5	128718.050339	71204.5	25774.696999	9444.0
+Despite having fewer total users, "banned" and "under review" authors attract significantly higher engagement in terms of views, likes, and shares compared to "active" authors. *
+# Feature extraction exercise
+# Create new columns to better understand engagement rates:
+# `likes_per_view`, `comments_per_view`, and `shares_per_view`
+
+data_eng = data.copy()
+
+data_eng["likes_per_view"] = data["video_like_count"] / data["video_view_count"]
+data_eng["comments_per_view"] = data["video_comment_count"] / data["video_view_count"]
+data_eng["shares_per_view"] = data["video_share_count"] / data["video_view_count"]
+
+# Compile information to calculate the count, mean, and median
+# grouped by `claim_status` and `author_ban_status`
+data_eng.groupby(["claim_status", "author_ban_status"]).agg({"likes_per_view" : ["count", "mean", "median"],
+                                                            "comments_per_view": ["mean", "median"],
+                                                            "shares_per_view": ["mean", "median"]})
+likes_per_view	comments_per_view	shares_per_view
+count	mean	median	mean	median	mean	median
+claim_status	author_ban_status							
+claim	active	6566	0.329542	0.326538	0.001393	0.000776	0.065456	0.049279
+banned	1439	0.345071	0.358909	0.001377	0.000746	0.067893	0.051606
+under review	1603	0.327997	0.320867	0.001367	0.000789	0.065733	0.049967
+opinion	active	8817	0.219744	0.218330	0.000517	0.000252	0.043729	0.032405
+banned	196	0.206868	0.198483	0.000434	0.000193	0.040531	0.030728
+under review	463	0.226394	0.228051	0.000536	0.000293	0.044472	0.035027
+Explaratory Data Analysis
+# Create a boxplot and histogram to visualize the distribution of `video_duration_sec`
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_duration_sec",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video Durations")
+ax[0].set_ylim(0, 61)
+
+sns.histplot(data = data,
+             x = "video_duration_sec",
+             bins = range(0, 61, 5),
+             ax = ax[1])
+ax[1].set_title("Histogram of Video Durations")
+fig.tight_layout()
+plt.show()
+
+Video lengths range from 0 to 60 seconds, with durations fairly evenly distributed across this span. There's a slight tendency for videos to cluster towards the upper end of the time limit, with a bit more content approaching the full 60-second duration.
+
+# Create a boxplot and histogram to visualize the distribution of `video_view_count`
+
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_view_count",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video View Counts")
+
+sns.histplot(data = data,
+             x = "video_view_count",
+             ax = ax[1])
+ax[1].set_title("Histogram of Video View Counts")
+
+fig.tight_layout()
+plt.show()
+
+The distribution of video views is highly skewed to the left (low view counts). There are some videos with upwards of one million views ("viral" videos), but the majority of videos fall on the very low end of view counts.
+
+# Create a boxplot and histogram to visualize the distribution of `video_like_count`
+
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_like_count",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video Like Counts")
+
+sns.histplot(data = data,
+             x = "video_like_count",
+             bins = 20,
+             ax = ax[1])
+ax[1].set_title("Histogram of Video Like Counts")
+
+fig.tight_layout()
+plt.show()
+
+# Create a boxplot and histogram to visualize the distribution of `video_comment_count`
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_comment_count",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video Comments")
+
+sns.histplot(data = data,
+             x = "video_comment_count",
+             bins = 20,
+             ax = ax[1])
+ax[1].set_title("Histogram of Video Comments")
+
+fig.tight_layout()
+plt.show()
+
+# Create a boxplot and histogram to visualize the distribution of `video_share_count`
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_share_count",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video Share Counts")
+
+sns.histplot(data = data,
+             x = "video_share_count",
+             bins = 20,
+             ax = ax[1])
+ax[1].set_title("Histogram of Video Share Counts")
+
+fig.tight_layout()
+plt.show()
+
+# Create a boxplot and histogram to visualize the distribution of `video_download_count`
+
+fig, ax = plt.subplots(1, 2, width_ratios = [1, 3], figsize = (6, 3))
+
+sns.boxplot(data = data,
+            y = "video_download_count",
+            showfliers = True,
+            ax = ax[0])
+ax[0].set_title("Boxplot of Video Downloads")
+
+sns.histplot(data = data,
+             x = "video_download_count",
+             bins = 20,
+             ax = ax[1])
+ax[1].set_title("Histogram of Video Downloads")
+
+fig.tight_layout()
+plt.show()
+
+The above plots all demonstrate similar trends: distributions of video views, likes, comments, shares, and downloads are all skewed to the left.
+
+# Create a histogram of `claim_status` by `verification_status`
+plt.figure(figsize = (3, 4))
+sns.histplot(data = data,
+             x = "claim_status",
+             hue = "verified_status",
+             multiple = "dodge",
+             shrink = 0.8)
+plt.title("Claim Status by Author Verification Status")
+plt.show()
+
+# Create a histogram of `claim_status` by `author_ban_status`
+plt.figure(figsize = (3, 4))
+sns.histplot(data = data,
+             x = "claim_status",
+             hue = "author_ban_status",
+             hue_order = ["active", "under review", "banned"],
+             multiple = "dodge",
+             shrink = 0.8)
+plt.title("Claim Status by Author Ban Status")
+plt.show()
+
+As the numbers previously calculated demonstrated--the proportion of active authors is far greater for videos classified as "opinion" than for videos classified as "claim". Or, phrased in the other way, users who post videos classified as "claim" are more likely to come "under review" or violate the terms of service and be "banned".
+
+# Create a bar plot of median view counts by ban status
+plt.figure(figsize = (3, 4))
+sns.barplot(data = data,
+            x = "author_ban_status",
+            y = "video_view_count",
+            order = ["active", "under review", "banned"],
+            estimator = "median",
+            errorbar = None,
+            edgecolor = "black")
+plt.title("Median Video View Count by Author Ban Status")
+plt.show()
+
+From the above plot, it is apparent that the median view counts for authors that are "banned" or "under review" are much higher than those for authors that are "active".
+
+# Calculate the median view count for claim status.
+data.groupby("claim_status")["video_view_count"].median()
+claim_status
+claim      501555.0
+opinion      4953.0
+Name: video_view_count, dtype: float64
+# Create a pie graph depicting the proportions of total views by `claim_status`
+plt.pie(x = data.groupby("claim_status")["video_view_count"].sum(),
+        explode = [0.25, 0.25],
+        labels = ["Claim", "Opinion"],
+        autopct = "%1.1f%%")
+plt.title("Proportion of Total Views for Claim vs. Opinion Videos")
+plt.show()
+
+Much higher proportion of overall view counts are for videos that are classified as "claim"; videos that are classified as "opinion" compose only a very small proportion of total video view counts.
+
+# Determine how many data points in the data set could be considered outliers
+# A common way to determine outliers in a normal distribution is through
+# the interquartile ranges
+
+cols = ["video_view_count", "video_like_count", "video_share_count",
+       "video_download_count", "video_comment_count"]
+
+for col in cols:
+    percentile_25 = data[col].quantile(0.25)  # 25th percentile
+    percentile_75 = data[col].quantile(0.75)  # 75th percentile
+    iqr = percentile_75 - percentile_25  # calculate IQR
+    
+    col_med = data[col].median()  # median of column
+    
+    threshold = col_med + (1.5 * iqr)  # outlier threshold (upper only)
+    
+    count_sum = (data[col] > threshold).sum()  # mask + sum Boolean mask
+    
+    print("Number of outliers in", col, ":", count_sum)
+Number of outliers in video_view_count : 2343
+Number of outliers in video_like_count : 3468
+Number of outliers in video_share_count : 3732
+Number of outliers in video_download_count : 3733
+Number of outliers in video_comment_count : 3882
+Different models handle outliers differently. Therefore, outliers will be handled (i.e., removed) prior to model building in future sections.
+
+# Create a scatterplot of `video_view_count` vs `video_like_count` 
+# according to 'claim_status'
+
+fig, ax = plt.subplots(1, 2, figsize = (8, 4))
+
+sns.scatterplot(data = data,
+                x = "video_view_count",
+                y = "video_like_count",
+                hue = "claim_status",
+                alpha = 0.4,
+                ax = ax[0])
+ax[0].legend()
+ax[0].set_title("Video Like Count vs. Video View Count")
+
+sns.scatterplot(data = data[data["claim_status"] == "opinion"],
+                x = "video_view_count",
+                y = "video_like_count",
+                c = "orange",
+                alpha = 0.4,
+                ax = ax[1])
+ax[1].legend(labels = ["opinion"])
+ax[1].set_title("Like Count vs. View Count for `Opinions`")
+
+plt.tight_layout()
+plt.show()
+
+The above scatterplots confirm that videos classified as "claim" tend to have much higher view and like counts than those videos classified as "opinion".
+
+Dataset: ~20,000 entries, 12 attributes (8 numerical, 4 categorical). Class balance: 'claim_status' is balanced, aiding future modeling. Data distributions: Video metrics (views, likes, comments, shares, downloads) are highly skewed, typical of social media content. Key findings:
+
+"Claim" videos receive more views/likes than "opinion" videos. "Claim" video posters more likely to be "under review" or "banned". Video engagement correlates more with 'claim_status' than 'author_ban_status'. "Claim" videos get more engagement regardless of 'author_ban_status'.
+
+Statistical Analysis
+**The objective for this aspect of the project is to determine if there is a statistically significant difference in the number of views for TikTok videos posted by verified accounts versus unverified accounts.
+
+Therefore, the null and alternerative hypotheses are the following:
+
+Null Hypothesis ( H 0 ): there is no statistically significant difference between the number of views for TikTok videos posted by verified accounts versus unverified accounts.
+
+Alternative Hypothesis ( H a ): there is a statistically significant difference between the number of views for TikTok videos posted by verified accounts versus unverified accounts.**
+
+Data Cleaning:
+
+# Import packages for statistical analysis/hypothesis testing
+from scipy import stats
+# Determine how many rows are missing data
+data.isnull().sum()
+#                             0
+claim_status                298
+video_id                      0
+video_duration_sec            0
+video_transcription_text    298
+verified_status               0
+author_ban_status             0
+video_view_count            298
+video_like_count            298
+video_share_count           298
+video_download_count        298
+video_comment_count         298
+dtype: int64
+# Drop rows with missing values and save as a new dataframe
+
+print("Number of entries prior to cleaning:", data.shape[0])
+data_cleaned = data.dropna(axis = 0)
+print("Number of entries removed after cleaning:", data.shape[0] - data_cleaned.shape[0])
+Number of entries prior to cleaning: 19382
+Number of entries removed after cleaning: 298
+Hypothesis Testing: 1.State the null and alternative hypotheses 2.Choose a significance level 3.Calculate the p-value 4.Reject or fail to reject the null hypothesis
+
+# Compute the mean `video_view_count` for each group in `verified_status`
+data_cleaned.groupby("verified_status")["video_view_count"].mean()
+verified_status
+not verified    265663.785339
+verified         91439.164167
+Name: video_view_count, dtype: float64
+# Conduct a two-sample t-test to compare means
+
+# Subset data accordingly using Boolean masks
+data_cleaned_verified = data_cleaned[data_cleaned["verified_status"] == "verified"]
+data_cleaned_unverified = data_cleaned[data_cleaned["verified_status"] == "not verified"]
+
+# Conduct the hypothesis testing to calculate the p-value
+tstat, pvalue = stats.ttest_ind(
+    a = data_cleaned_verified["video_view_count"],
+    b = data_cleaned_unverified["video_view_count"],
+    equal_var = False)
+
+print("t-statistic:", tstat)
+print("p-value:", pvalue)
+t-statistic: -25.499441780633777
+p-value: 2.6088823687177823e-120
+Results: The calculated p-value of the two-sample t-test was: 2.60E-120.
+
+This value is much smaller than the chosen significance level of 0.05 (or 5%). Therefore, the testing rejects the null hypothesis in favor of the alternative hypothesis thereby suggesting that there is a significant difference between the number of views for TikTok videos posted by verified accounts versus unverified accounts.
+
+Logistic Regression Model for Author Verified Status
+**Objective¶ Based on the hypothesis testing performed in the previous section, the objective for this section is to build a logistic regression model to predict user verified status and explore how video characteristics relate to verified users.
+
+A logistic regression model relies on the following assumptions:
+
+The outcome variable is categorical Observations are independent of each other There is no severe multicollinearity among predictor variables There are no extreme outliers A linear relationship between each X variable and the logit of the outcome variable There is a sufficiently large sample size**
+
+Data Cleaning and Prep:
+
+# Import packages for data preprocessing
+import sklearn.utils as utils
+from sklearn.model_selection import train_test_split
+
+# Import relevant packages for data modeling
+from sklearn.linear_model import LogisticRegression
+import sklearn.metrics as metrics
+# Check for and handle duplicates as necessary
+data_cleaned.duplicated().sum()
+0
+Outliers Based on the previous boxplots in " Exploratory Data Analysis ", the following columns contain outliers:
+
+video_like_count video_comment_count video_share_count video_download_count However, for this notebook, outliers will only be removed based on the video_like_count and video_comment_count columns using the interquartile ranges.
+
+# Handle outliers in `video_like_count`
+
+percentile_25 = data_cleaned["video_like_count"].quantile(0.25)
+percentile_75 = data_cleaned["video_like_count"].quantile(0.75)
+iqr = percentile_75 - percentile_25  # interquartile range
+
+lower_limit = percentile_25 - (1.5 * iqr)
+upper_limit = percentile_75 + (1.5 * iqr)
+
+outlier_mask = (data_cleaned["video_like_count"] >= lower_limit) & \
+(data_cleaned["video_like_count"] <= upper_limit)
+
+data_logm = data_cleaned[outlier_mask].copy()
+print("Entries removed:", data_cleaned.shape[0] - data_logm.shape[0])
+Entries removed: 1726
+# Handle outliers in `video_comment_count`
+
+percentile_25 = data_cleaned["video_comment_count"].quantile(0.25)
+percentile_75 = data_cleaned["video_comment_count"].quantile(0.75)
+iqr = percentile_75 - percentile_25  # interquartile range
+
+lower_limit = percentile_25 - (1.5 * iqr)
+upper_limit = percentile_75 + (1.5 * iqr)
+
+outlier_mask = (data_logm["video_comment_count"] >= lower_limit) & \
+(data_logm["video_comment_count"] <= upper_limit)
+
+pre_removal = data_logm.shape[0]
+data_logm = data_logm[outlier_mask].copy()
+print("Entries removed:", pre_removal - data_logm.shape[0])
+Entries removed: 1664
+Check class balance and use resampling to create class balance, if necessary:
+
+# Check class balance for the outcome variable: `verified_status`
+print(data_logm["verified_status"].value_counts())
+print()
+print(data_logm["verified_status"].value_counts(normalize = True))
+verified_status
+not verified    14568
+verified         1126
+Name: count, dtype: int64
+
+verified_status
+not verified    0.928253
+verified        0.071747
+Name: proportion, dtype: float64
+Approximately 92.8% of the data represents videos posted by unverified accounts and 7.2% represents videos posted by verified accounts. The outcome variable is not extremely unbalanced, but it is unbalanced enough that steps to rebalance classes will be taken.
+
+# Use upsampling to create class balance in the outcome variable
+
+# Identify data from the majority and minority classes
+data_verified = data_logm[data_logm["verified_status"] == "verified"]
+data_unverified = data_logm[data_logm["verified_status"] == "not verified"]
+
+# Upsample the minority class
+data_verified_upsampled = utils.resample(data_verified,
+                                         replace = True,  # sample with replacement
+                                         n_samples = data_unverified.shape[0],
+                                         random_state = 42)
+
+# Concatenate dataframes
+data_logm_sampled = pd.concat([data_unverified, data_verified_upsampled], axis = 0)
+
+# Display new class counts
+data_logm_sampled["verified_status"].value_counts()
+verified_status
+not verified    14568
+verified        14568
+Name: count, dtype: int64
+Feature Engineering :
+
+# Get the average `video_transcription_text` length for claims and opinions
+print("Average length of `video_transcription_text` for claims:", "%.2f" % \
+      data_logm[data_logm["claim_status"] == "claim"]["video_transcription_text"].str.len().mean())
+print("Average length of `video_transcription_text` for opinions:", "%.2f" % \
+      data_logm[data_logm["claim_status"] == "opinion"]["video_transcription_text"].str.len().mean())
+Average length of `video_transcription_text` for claims: 95.55
+Average length of `video_transcription_text` for opinions: 82.72
+# Extract the length of each `video_transcription_text` and add this as a column to the dataframe
+data_logm_sampled["transcription_text_len"] = data_logm_sampled["video_transcription_text"].str.len()
+data_logm_sampled.head()
+#	claim_status	video_id	video_duration_sec	video_transcription_text	verified_status	author_ban_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count	transcription_text_len
+0	1	claim	7017666017	59	someone shared with me that drone deliveries a...	not verified	under review	343296.0	19425.0	241.0	1.0	0.0	97
+1	2	claim	4014381136	32	someone shared with me that there are more mic...	not verified	active	140877.0	77355.0	19034.0	1161.0	684.0	107
+2	3	claim	9859838091	31	someone shared with me that american industria...	not verified	active	902185.0	97690.0	2858.0	833.0	329.0	137
+3	4	claim	1866847991	25	someone shared with me that the metro of st. p...	not verified	active	437506.0	239954.0	34812.0	1234.0	584.0	131
+4	5	claim	7105231098	19	someone shared with me that the number of busi...	not verified	active	56167.0	34987.0	4110.0	547.0	152.0	128
+# Visualize the distribution of `video_transcription_text` length
+fig = plt.figure(figsize = (5, 5))
+sns.histplot(data = data_logm_sampled,
+             x = "transcription_text_len",
+             hue = "verified_status",
+             bins = range(0, 201, 5),
+             multiple = "layer",
+             palette = "pastel")
+plt.title("Histogram of Video Transcription Text Length")
+plt.show()
+
+# Generate a correlation heatmap of the variables
+# to investigate potential multicollinearity
+# and variable relationships with the outcome variable
+
+plt.figure(figsize=(8, 6))
+sns.heatmap(data_logm.corr(numeric_only = True),
+            annot = True,  # sets annotation to be true 
+            cmap = "coolwarm",
+            vmin = -1.0,
+            vmax = 1.0)
+plt.title("Heatmap of the Dataset")
+plt.xticks(rotation = 45, horizontalalignment = "right")
+plt.show()
+
+Based on the above heatmap and correlation matrix, it appears that video_view_count, video_like_count, video_share_count, video_download_count, and video_comment_count are all positively correlated with each other. This is not surprising as this, again, is a defining feature of social media and engagement.
+
+Categorical Variable Encoding:
+
+# Encode relevant categorical variables
+
+# Copy dataframe
+data_logm_dummies = data_logm_sampled.copy()
+
+# Map outcome variable
+data_logm_dummies["verified_status"] = data_logm_dummies["verified_status"].map({"not verified" : False,
+                                                                                 "verified" : True})
+
+# Encode other categorical variables as dummy variables
+data_logm_dummies = pd.get_dummies(data_logm_dummies,
+                                   columns = ["claim_status",
+                                              "author_ban_status"],
+                                   drop_first = True)
+# Display first several rows of new DataFrame
+data_logm_dummies.head()
+#	video_id	video_duration_sec	video_transcription_text	verified_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count	transcription_text_len	claim_status_opinion	author_ban_status_banned	author_ban_status_under review
+0	1	7017666017	59	someone shared with me that drone deliveries a...	False	343296.0	19425.0	241.0	1.0	0.0	97	False	False	True
+1	2	4014381136	32	someone shared with me that there are more mic...	False	140877.0	77355.0	19034.0	1161.0	684.0	107	False	False	False
+2	3	9859838091	31	someone shared with me that american industria...	False	902185.0	97690.0	2858.0	833.0	329.0	137	False	False	False
+3	4	1866847991	25	someone shared with me that the metro of st. p...	False	437506.0	239954.0	34812.0	1234.0	584.0	131	False	False	False
+4	5	7105231098	19	someone shared with me that the number of busi...	False	56167.0	34987.0	4110.0	547.0	152.0	128	False	False	False
+Model Building:
+
+# Select predictor (X) and outcome (y) variables
+y = data_logm_dummies["verified_status"]
+X = data_logm_dummies.drop(columns = ["verified_status",  # this is the outcome variable
+                                      "#",  # should not impact the model
+                                      "video_id",  # should not impact the model
+                                      "video_transcription_text"])  # feature was engineered
+# Split the data into training and test sets
+X_train, X_test, y_train, y_test = train_test_split(X,
+                                                    y,
+                                                    test_size = 0.3,
+                                                    stratify = y,
+                                                    random_state = 42)
+# Confirm sizes of training and test sets
+print("Training Sets")
+print(X_train.shape, y_train.shape)
+print()
+print("Test Sets")
+print(X_test.shape, y_test.shape)
+Training Sets
+(20395, 10) (20395,)
+
+Test Sets
+(8741, 10) (8741,)
+# Build the model and fit to the training set
+log_clf = LogisticRegression().fit(X_train, y_train)  # clf = "classifier"
+Model Evaluation:
+
+# Use the model to make predictions on the test set
+y_pred = log_clf.predict(X_test)
+
+# Compute the values for a confusion matrix
+cm = metrics.confusion_matrix(y_test, y_pred, labels = log_clf.classes_)
+
+# Create the confusion matrix display
+disp = metrics.ConfusionMatrixDisplay(confusion_matrix = cm,
+                                      display_labels = log_clf.classes_)
+
+# Display the plot
+disp.plot(values_format = "")  # argument suppresses scientific notation
+<sklearn.metrics._plot.confusion_matrix.ConfusionMatrixDisplay at 0x79e567024c10>
+
+# Print out classification report
+print(metrics.classification_report(y_test, y_pred))
+              precision    recall  f1-score   support
+
+       False       0.77      0.34      0.47      4371
+        True       0.58      0.90      0.70      4370
+
+    accuracy                           0.62      8741
+   macro avg       0.67      0.62      0.59      8741
+weighted avg       0.67      0.62      0.59      8741
+
+Based on the confusion matrix, the logistic regresison model is fairly good at predicting "not verified" users (true positives) but does a poor job of predicting "verified" users (true negatives) as there are many false positives predicted ("not verified" users that are incorrectly predicted to be "verified" by the model). This is reflected in the classification report where the recall score for True or "verified" users is 0.90 but the weighted average for both classes is much lower at 0.62.
+
+# Get the feature names from the model and the model coefficients
+# (which represent log-odds ratios)
+# Place into a DataFrame for readability
+
+import math
+pd.DataFrame(data = {"Feature Name" : log_clf.feature_names_in_,
+                     "Model Coefficient" : log_clf.coef_[0],
+                     "Exponentiated Model Coefficient" : math.e ** log_clf.coef_[0]})
+Feature Name	Model Coefficient	Exponentiated Model Coefficient
+0	video_duration_sec	0.001038	1.001039
+1	video_view_count	-0.000002	0.999998
+2	video_like_count	-0.000004	0.999996
+3	video_share_count	0.000008	1.000008
+4	video_download_count	-0.000146	0.999854
+5	video_comment_count	0.000057	1.000057
+6	transcription_text_len	0.002686	1.002689
+7	claim_status_opinion	0.000049	1.000049
+8	author_ban_status_banned	-0.000001	0.999999
+9	author_ban_status_under review	-0.000001	0.999999
+Logistic Regression Model Results for User Verified Status The dataset has a few strongly correlated variables, which may have resulted in multicollinearity issues that impacted the logistic regression model. Future iterations should explore feature selection and additional feature engineering. With weighted accuracy, precision, recall, and F1 scores of 0.62, 0.67, 0.62, and 0.59, respectively, the model demonstrates less than ideal performance. Although the model predicts actual "verified" users with high likelihood, the model also overpredicts "verified" users in general (resulting in a large number of false positives). The model coefficients do not offer much insight into classification of verified_status. After exponentiation, the coefficients are all relatively close to one, so the impact they have on the final model are appear minimal individually.
+
+Machine Learning Model for Classification
+Objective:
+
+This is the final goal of this project: to develop a predictive model for classifying whether a video contains a claim or offers an opinion. The model has the potential to reduce a backlog of user reports and prioritize them more efficiently. Understanding the features that most impact these predictions will have business and ethical implications as well.
+
+False Negatives vs. False Positives
+
+If the model predicts a false positive (i.e., the model classifies a video as a "claim" when it does not contain one), the video will undergo additional review and receive greater scrutiny by the TikTok team. Although this may create more work internally for the team that is responsible for reviewing videos, it does not create ethical concerns. If the model predicts a false negative (i.e., the model classifies a video as an "opinion" when it actually contains a claim), the video may be missed for review. This could result in content being released to viewers that should be scrutinized more closely and ultimately leads to ethical concerns.
+
+Data Cleaning and Prep:
+
+# Import relevant packages
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier, plot_importance
+import sklearn.metrics as metrics
+import pickle
+# The data has already been loaded
+# Missing and duplicate entries were handled previously
+data_cleaned.head()
+#	claim_status	video_id	video_duration_sec	video_transcription_text	verified_status	author_ban_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count
+0	1	claim	7017666017	59	someone shared with me that drone deliveries a...	not verified	under review	343296.0	19425.0	241.0	1.0	0.0
+1	2	claim	4014381136	32	someone shared with me that there are more mic...	not verified	active	140877.0	77355.0	19034.0	1161.0	684.0
+2	3	claim	9859838091	31	someone shared with me that american industria...	not verified	active	902185.0	97690.0	2858.0	833.0	329.0
+3	4	claim	1866847991	25	someone shared with me that the metro of st. p...	not verified	active	437506.0	239954.0	34812.0	1234.0	584.0
+4	5	claim	7105231098	19	someone shared with me that the number of busi...	not verified	active	56167.0	34987.0	4110.0	547.0	152.0
+Recall some advantages of tree-based machine learning models:
+
+Require no assumptions regarding the underlying distribution of data Handle collinearity well Do not require data scaling or normalization Decisions are transparent and interpretable Handle outliers well Therefore, outliers do not need to be removed here.
+
+# Check class balance
+print(data_cleaned["claim_status"].value_counts())
+print()
+print(data_cleaned["claim_status"].value_counts(normalize = True))
+claim_status
+claim      9608
+opinion    9476
+Name: count, dtype: int64
+
+claim_status
+claim      0.503458
+opinion    0.496542
+Name: proportion, dtype: float64
+The class balance of the data is almost 50/50. No rebalancing is required.
+
+Feature Engineering, Variable Encoding, & Variable Selection
+
+# Extract the length of each `video_transcription_text`
+# and add this as a column to the dataframe
+
+data_mlm = data_cleaned.copy()
+data_mlm["transcription_text_len"] = data_mlm["video_transcription_text"].str.len()
+data_mlm.head()
+#	claim_status	video_id	video_duration_sec	video_transcription_text	verified_status	author_ban_status	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count	transcription_text_len
+0	1	claim	7017666017	59	someone shared with me that drone deliveries a...	not verified	under review	343296.0	19425.0	241.0	1.0	0.0	97
+1	2	claim	4014381136	32	someone shared with me that there are more mic...	not verified	active	140877.0	77355.0	19034.0	1161.0	684.0	107
+2	3	claim	9859838091	31	someone shared with me that american industria...	not verified	active	902185.0	97690.0	2858.0	833.0	329.0	137
+3	4	claim	1866847991	25	someone shared with me that the metro of st. p...	not verified	active	437506.0	239954.0	34812.0	1234.0	584.0	131
+4	5	claim	7105231098	19	someone shared with me that the number of busi...	not verified	active	56167.0	34987.0	4110.0	547.0	152.0	128
+# Calculate the average `video_transcription_text` length for claims and opinions
+data_mlm.groupby("claim_status")["transcription_text_len"].mean()
+claim_status
+claim      95.376978
+opinion    82.722562
+Name: transcription_text_len, dtype: float64
+# Visualize the distribution of `video_transcription_text` length for claims and opinions
+sns.histplot(data = data_mlm,
+             x = "transcription_text_len",
+             stat = "count",
+             bins = range(0, 202, 3),
+             multiple = "layer",
+             kde = False,
+             palette = "pastel", 
+             hue = "claim_status",
+             element ="bars",
+             legend = True)
+plt.title("Stacked Histogram")
+plt.xlabel("video_transcription_text length (number of characters)")
+plt.ylabel("Count")
+plt.show()
+
+# Variable Encoding
+
+# Map outcome variable
+data_mlm["claim_status"] = data_mlm["claim_status"].map({"opinion" : False,
+                                                         "claim" : True})
+
+# Encode other categorical variables as dummy variables
+data_mlm = pd.get_dummies(data_mlm,
+                          columns = ["verified_status",
+                                     "author_ban_status"],
+                          drop_first = True)
+
+# Display first several rows of new DataFrame
+data_mlm.head()
+#	claim_status	video_id	video_duration_sec	video_transcription_text	video_view_count	video_like_count	video_share_count	video_download_count	video_comment_count	transcription_text_len	verified_status_verified	author_ban_status_banned	author_ban_status_under review
+0	1	True	7017666017	59	someone shared with me that drone deliveries a...	343296.0	19425.0	241.0	1.0	0.0	97	False	False	True
+1	2	True	4014381136	32	someone shared with me that there are more mic...	140877.0	77355.0	19034.0	1161.0	684.0	107	False	False	False
+2	3	True	9859838091	31	someone shared with me that american industria...	902185.0	97690.0	2858.0	833.0	329.0	137	False	False	False
+3	4	True	1866847991	25	someone shared with me that the metro of st. p...	437506.0	239954.0	34812.0	1234.0	584.0	131	False	False	False
+4	5	True	7105231098	19	someone shared with me that the number of busi...	56167.0	34987.0	4110.0	547.0	152.0	128	False	False	False
+# Assign variables
+y = data_mlm["claim_status"]
+X = data_mlm.drop(columns = ["claim_status",
+                             "#",
+                             "video_id",
+                             "video_transcription_text"])
+# Split data into training and test sets, 80/20
+X_tr, X_test, y_tr, y_test = train_test_split(X,
+                                              y,
+                                              test_size = 0.20,
+                                              stratify = y,
+                                              random_state = 42)
+# Split the training data into training and validation sets, 75/25 --> 60/20/20 final
+X_train, X_val, y_train, y_val = train_test_split(X_tr,
+                                                  y_tr,
+                                                  test_size = 0.25,
+                                                  stratify = y_tr,
+                                                  random_state = 42)
+# Confirm training, validation, and test sets
+print("Training Sets")
+print(X_train.shape, y_train.shape, "\n")
+print("Validation Sets")
+print(X_val.shape, y_val.shape, "\n")
+print("Test Sets")
+print(X_test.shape, y_test.shape)
+Training Sets
+(11450, 10) (11450,) 
+
+Validation Sets
+(3817, 10) (3817,) 
+
+Test Sets
+(3817, 10) (3817,)
+Random Forest Model Building & Evaluation:
+
+# Instantiate the random forest classifier
+rf = RandomForestClassifier(random_state = 42)
+
+# Create a dictionary of hyperparameters to tune
+cv_params = {"n_estimators" : [50, 100],
+             "max_depth" : [5, 10],
+             "min_samples_leaf" : [1, 3],
+             "min_samples_split" : [2, 4],
+             "max_features" : [5, None]}
+
+# Define a dictionary of scoring metrics to capture
+scoring = {"accuracy", "precision", "recall", "f1"}
+
+# Instantiate the GridSearchCV object
+rf_cv = GridSearchCV(rf,
+                     cv_params,
+                     scoring = scoring,
+                     cv = 5,  # cross-validation with number of folds
+                     refit = "recall",  # score to optimize
+                     n_jobs = -1,  # use all processors to run in parallel
+                     verbose = 1)  # display computation time for each fold
+%%time
+
+# Fit the model
+rf_cv.fit(X_train, y_train)
+Fitting 5 folds for each of 32 candidates, totalling 160 fits
+CPU times: user 1.6 s, sys: 279 ms, total: 1.88 s
+Wall time: 1min 5s
+GridSearchCV
+estimator: RandomForestClassifier
+
+RandomForestClassifier
+# Define a path to the folder for saving the model
+path = "/kaggle/working/"
+# Pickle the model
+with open(path+"rf_cv_model.pickle", "wb") as to_write:
+    pickle.dump(rf_cv, to_write)
+# Open pickled random forest model
+with open(path+"rf_cv_model.pickle", "rb") as to_read:
+    rf_cv = pickle.load(to_read)
+# Print best score
+print("Best Average Refit Score (Recall):", "%.5f" % rf_cv.best_score_)
+Best Average Refit Score (Recall): 0.98994
+# Examine best parameters
+rf_cv.best_params_
+{'max_depth': 10,
+ 'max_features': 5,
+ 'min_samples_leaf': 1,
+ 'min_samples_split': 2,
+ 'n_estimators': 50}
+# Test the random forest "best estimator" model on the validation data
+y_val_pred = rf_cv.best_estimator_.predict(X_val)
+# Compute values for confusion matrix
+cm = metrics.confusion_matrix(y_val, y_val_pred)
+
+# Create display of confusion matrix
+disp = metrics.ConfusionMatrixDisplay(confusion_matrix = cm,
+                                      display_labels = rf_cv.classes_)
+
+# Display plot
+disp.plot(values_format = "")  # argument suppresses scientific notation
+<sklearn.metrics._plot.confusion_matrix.ConfusionMatrixDisplay at 0x79e566387f70>
+
+# Define function for outputting model evaluation results in DataFrame
+
+def classification_report_df(eval_df, model, y_test, y_pred):
+    """
+    Calculates evaluation metrics of the provided `model` (string) with associated
+    `y_test` (true) and `y_pred` (predicted) values and concatenates it
+    to the provided DataFrame `eval_df`.
+    """
+    
+    # Calculate evaluation metrics
+    accuracy = metrics.accuracy_score(y_test, y_pred)
+    precision = metrics.precision_score(y_test, y_pred)
+    recall = metrics.recall_score(y_test, y_pred)
+    f1 = metrics.f1_score(y_test, y_pred)
+    
+    # Instantiate evaluation metrics dictionary
+    eval_dict = {"Accuracy" : accuracy,
+                 "Precision" : precision,
+                 "Recall" : recall,
+                 "F1 Score" : f1,
+                }
+    # Convert to a DataFrame
+    df_to_concatenate = pd.DataFrame(eval_dict, index = [model])
+    
+    # Concatenate dictionary to provided DataFrame
+    eval_df = pd.concat([eval_df, df_to_concatenate])
+    
+    return eval_df
+# Create DataFrame to keep records of evaluated models
+eval_df = pd.DataFrame()
+eval_df = classification_report_df(eval_df, "Random Forest (Val)", y_val, y_val_pred)
+eval_df
+Accuracy	Precision	Recall	F1 Score
+Random Forest (Val)	0.996332	1.0	0.992716	0.996345
+The random forest model performs extremely well--it is great at classifying videos as claims and opinions appropriately. There are no false negatives and very few false positives
+
+Extreme Gradient Boosted (XGBoost) Model Building & Evaluation:
+
+# Instantiate the XGBoost classifier
+xgb = XGBClassifier(objective = "binary:logistic",
+                    random_state = 42)
+
+# Create a dictionary of hyperparameters to tune
+cv_params = {"n_estimators" : [5, 10, 15],
+             "max_depth" : [4, 6],
+             "min_child_weight" : [3, 5],
+             "learning_rate" : [0.1, 0.2, 0.3],
+             "subsample" : [0.7],
+             "colsample_bytree" : [0.7]}
+
+# Define a dictionary of scoring metrics to capture
+scoring = {"accuracy", "precision", "recall", "f1"}
+
+# Instantiate the GridSearchCV object
+xgb_cv = GridSearchCV(xgb,
+                      cv_params,
+                      scoring = scoring,
+                      cv = 5,  # cross-validation with number of folds
+                      refit = "recall",  # score to optimize
+                      n_jobs = -1,  # use all processors to run in parallel
+                      verbose = 1)  # display computation time for each fold
+%%time
+
+# Fit the model to training data
+xgb_cv.fit(X_train, y_train)
+Fitting 5 folds for each of 36 candidates, totalling 180 fits
+CPU times: user 617 ms, sys: 52.8 ms, total: 670 ms
+Wall time: 4.51 s
+GridSearchCV
+estimator: XGBClassifier
+
+XGBClassifier
+# Pickle the model
+with open(path+"xgb_cv_model.pickle", "wb") as to_write:
+    pickle.dump(xgb_cv, to_write)
+# Open pickled XGBoost model
+with open(path+"xgb_cv_model.pickle", "rb") as to_read:
+    xgb_cv = pickle.load(to_read)
+# Print best score
+print("Best Average Refit Score (Recall):", "%.5f" % xgb_cv.best_score_)
+Best Average Refit Score (Recall): 0.98786
+# Examine best parameters
+xgb_cv.best_params_
+{'colsample_bytree': 0.7,
+ 'learning_rate': 0.1,
+ 'max_depth': 4,
+ 'min_child_weight': 3,
+ 'n_estimators': 10,
+ 'subsample': 0.7}
+# Test the XGBoost "best estimator" model on the validation data
+y_val_pred = xgb_cv.best_estimator_.predict(X_val)
+# Compute values for confusion matrix
+cm = metrics.confusion_matrix(y_val, y_val_pred)
+
+# Create display of confusion matrix
+disp = metrics.ConfusionMatrixDisplay(confusion_matrix = cm,
+                                      display_labels = xgb_cv.classes_)
+
+# Display plot
+disp.plot(values_format = "")  # argument suppresses scientific notation
+<sklearn.metrics._plot.confusion_matrix.ConfusionMatrixDisplay at 0x79e566f47fd0>
+
+# Add model evaluation to DataFrame
+eval_df = classification_report_df(eval_df, "XGBoost (Val)", y_val, y_val_pred)
+eval_df
+Accuracy	Precision	Recall	F1 Score
+Random Forest (Val)	0.996332	1.000000	0.992716	0.996345
+XGBoost (Val)	0.995546	0.999476	0.991675	0.995560
+The random XGBoost model also performs extremely well. In fact, against the validation set, it performs similarly as well as the random forest model. Therefore, both models will be tested against the test dataset for final evaluation.
+
+Champion Model Evaluation Since both models performed exactly the same on the validation dataset using the metrics recorded, both models will be evaluated against the test dataset. Although this is not the standard workflow for model evaluation, it will be informative for the purposes of this project
+
+# Random Forest Confusion Matrix
+
+# Run the random forest "best estimator" model on the test data
+y_pred_rf = rf_cv.best_estimator_.predict(X_test)
+
+# Compute values for confusion matrix and display
+cm = metrics.confusion_matrix(y_test, y_pred_rf)
+disp = metrics.ConfusionMatrixDisplay(confusion_matrix = cm,
+                                      display_labels = rf_cv.classes_)
+disp.plot(values_format = "")
+<sklearn.metrics._plot.confusion_matrix.ConfusionMatrixDisplay at 0x79e58b4cbd90>
+
+# Random Forest Evaluation
+eval_df = classification_report_df(eval_df, "Random Forest (Test)", y_test, y_pred_rf)
+eval_df
+Accuracy	Precision	Recall	F1 Score
+Random Forest (Val)	0.996332	1.000000	0.992716	0.996345
+XGBoost (Val)	0.995546	0.999476	0.991675	0.995560
+Random Forest (Test)	0.996070	1.000000	0.992196	0.996083
+# XGBoost Confusion Matrix
+
+# Run the random forest "best estimator" model on the test data
+y_pred_xgb = xgb_cv.best_estimator_.predict(X_test)
+
+# Compute values for confusion matrix and display
+cm = metrics.confusion_matrix(y_test, y_pred_xgb)
+disp = metrics.ConfusionMatrixDisplay(confusion_matrix = cm,
+                                      display_labels = xgb_cv.classes_)
+disp.plot(values_format = "")
+<sklearn.metrics._plot.confusion_matrix.ConfusionMatrixDisplay at 0x79e5665fcc70>
+
+# XGBoost Evaluation
+eval_df = classification_report_df(eval_df, "XGBoost (Test)", y_test, y_pred_xgb)
+eval_df
+Accuracy	Precision	Recall	F1 Score
+Random Forest (Val)	0.996332	1.000000	0.992716	0.996345
+XGBoost (Val)	0.995546	0.999476	0.991675	0.995560
+Random Forest (Test)	0.996070	1.000000	0.992196	0.996083
+XGBoost (Test)	0.994236	0.997904	0.990635	0.994256
+*Against the test dataset, both the random forest and XGBoost models again perform similarly well, but the random forest model performs ever so slightly better. Therefore, the random forest model will be considered the champion model!
+
+Finally, the features from the champion model will be investigated.*
+
+# Plot feature importances
+
+importances = rf_cv.best_estimator_.feature_importances_
+rf_importances = pd.Series(importances, index = X_train.columns).sort_values(ascending = False)
+
+fig = plt.figure(figsize = (4, 4))
+sns.barplot(y = rf_importances.index,
+            x = rf_importances.values,
+            palette = "husl")
+plt.title("Random Forest Feature Importances")
+plt.xlabel("Mean Decrease in Gini Impurity")
+Text(0.5, 0, 'Mean Decrease in Gini Impurity')
+
+From the above plot of feature importances, it is clear that the most predictive features are all related to audience engagement.
+
+Results: Two ML models were developed: a random forest and an extreme gradient boosted model. Both performed exceptionally well on the test dataset, with the random forest slightly outperforming, making it the champion model. Key predictive features were audience engagement metrics (views, likes, downloads, shares). The models' high performance negates the need for further tuning or feature engineering. However, additional evaluation with new data is advised before deployment.
+
+Summary:
+Project Objective: Develop a model to classify TikTok videos as "claim" or "opinion".
+
+Key Findings:
+
+Data features showed high skew, typical of social media. "Claim" videos garnered more attention than "opinion" videos. Verified accounts' videos received significantly more views, but logistic regression poorly classified account verification status. Video engagement correlated more with 'claim_status' than 'author_ban_status' or 'verified_status'. Two effective tree-based ensemble models were created. The champion model confirmed video engagement metrics as top predictors. Higher engagement (views, likes, downloads, shares) increased likelihood of "claim" classification.
+
+Recommendations:
+
+No immediate need for model refinement, but evaluate with new data before deployment. Post-deployment, monitor model performance to ensure robustness against engagement fluctuations.
