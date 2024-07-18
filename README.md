@@ -15,11 +15,11 @@ The data team’s objective is to develop a predictive model that accurately cla
 Project Outline:
 
 
-Getting Familiar with the Data 
-Exploratory Data Analysis
-Statistical Testing
-Logistic Regression Model for Author Verified Status
-Machine Learning Models for Classification
-Summary 
+1.Getting Familiar with the Data 
+2.Exploratory Data Analysis
+3.Statistical Testing
+4.Logistic Regression Model for Author Verified Status
+5.Machine Learning Models for Classification
+6.Summary 
 
 The complete code has been included here. The link to the actual one : https://www.kaggle.com/aditidash30/tiktok-capstone
